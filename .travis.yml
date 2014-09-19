@@ -1,0 +1,27 @@
+language: go
+go:
+ - 1.1
+ - 1.2
+ - 1.3
+ - tip
+
+env:
+ global:
+  secure: "UPIw5pZqkg7B5OAgmTc9BPJ7h0SFG8fJSsOxt0k0UMqctw0UB77OsqlLF2Uj+PFaBJkNkRQmnYsdSQV1exgJPMiZCCkc4LcbsAKkIYl4ig5+yCKfzAz2lxFjpp8Gv4/Cs1DifQV45JeV8C3BdkAVd4MizgqVHs5acY7L/onR45s="
+
+before_script:
+ - go get code.google.com/p/go.tools/cmd/cover
+ - go version | egrep -q go1.1 || go get code.google.com/p/go.tools/cmd/vet
+ - go get github.com/liquidgecka/testlib
+ - go get github.com/mattn/goveralls
+
+script:
+ - test -z "$(gofmt -l . | tee /dev/stderr)"
+ - go vet .
+ - go test -v
+ - go version | egrep -q go1.1 || go test -covermode=count -coverprofile=/tmp/coverage.out
+ - go version | egrep -q go1.1 || sudo -E $(which go) install -a -race std
+ - go version | egrep -q go1.1 || go test -v -race .
+
+after_script:
+ - $HOME/gopath/bin/goveralls -coverprofile=/tmp/coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
