@@ -27,7 +27,7 @@ idiomatic golang.
 
 [![Continuous Integration](https://secure.travis-ci.org/orchestrate-io/dvr.svg?branch=master)](http://travis-ci.org/orchestrate-io/dvr)
 [![Documentation](http://godoc.org/github.com/orchestrate-io/dvr?status.png)](http://godoc.org/github.com/orchestrate-io/dvr)
-[![Coverage](https://img.shields.io/coveralls/orchestrate.io/dvr.svg)](https://coveralls.io/r/orchestrate-io/dvr)
+[![Coverage](https://img.shields.io/coveralls/orchestrate-io/dvr.svg)](https://coveralls.io/r/orchestrate-io/dvr)
 
 ## Contribution
 
