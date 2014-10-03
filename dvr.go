@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"sync"
 )
 
@@ -60,6 +61,7 @@ var (
 	writer      *tar.Writer
 	writerLock  sync.Mutex
 	writerCount int
+	writerCmd   *exec.Cmd
 
 	// This is the list of object read from the gob file.
 	requestList []*RequestResponse

@@ -17,11 +17,13 @@ package dvr
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/binary"
 	"encoding/gob"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 )
 
 // If this value is anything other than nil it will be called on a copy
@@ -39,15 +41,29 @@ var Obfuscator func(*RequestResponse)
 // the output file as a zip stream so each follow up call can write an
 // individual call to the output.
 func (r *roundTripper) recordSetup() {
-	var err error
-
-	// Open the zip file for writing.
-	fd, err = os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+	// Open the gzip file.
+	gzipFD, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
 		os.FileMode(0755))
 	panicIfError(err)
 
+	// Write the current version to the file as a 32 bit word.
+	version := uint32(1)
+	err = binary.Write(gzipFD, binary.BigEndian, version)
+	panicIfError(err)
+
+	// Create a pipe that we can use to talk to the child process.
+	gzipReader, gzipWriter, err := os.Pipe()
+	panicIfError(err)
+
+	// Start the gzipper command.
+	writerCmd = exec.Command(os.Args[0], InterceptorToken)
+	writerCmd.Stdout = gzipFD
+	writerCmd.Stdin = gzipReader
+	panicIfError(writerCmd.Start())
+
 	// Create the new zip writer that will store our results.
-	writer = tar.NewWriter(fd)
+	fd = gzipWriter
+	writer = tar.NewWriter(gzipWriter)
 }
 
 // This function is called if the testing library is in recording mode.
@@ -152,7 +168,7 @@ func (r *roundTripper) record(req *http.Request) (*http.Response, error) {
 	// underlying file descriptor.. This is necessary since we don't know
 	// when the program is going to exit.
 	panicIfError(writer.Flush())
-	panicIfError(fd.Sync())
+	//	panicIfError(fd.Sync())
 
 	// Success!
 	return resp, realErr
