@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 
@@ -268,6 +269,7 @@ func TestFullCycle(t *testing.T) {
 	// Fun a bunch of queries against the server directly (no dvr at all) as
 	// we as with a pass through dvr Transport in place. Once we are done
 	// we compare all of the results of the two tests against each other.
+	isSetup = sync.Once{}
 	record = false
 	replay = false
 	directResponses := runTests(T, OriginalDefaultTransport, addr, "", "")
@@ -284,6 +286,7 @@ func TestFullCycle(t *testing.T) {
 	// We setup a recording RoundTripper and run the same tests as above into
 	// it. Once done we compare the results against the direct responses.
 	fileName = T.TempFile().Name()
+	isSetup = sync.Once{}
 	record = true
 	replay = false
 	recordTripper := &roundTripper{realRoundTripper: OriginalDefaultTransport}
@@ -296,6 +299,7 @@ func TestFullCycle(t *testing.T) {
 	// Now we need to validate the file by attempting to "replay" it. To do
 	// this we create a new roundTripper with the replay option set to the file
 	// we just created and reset the flags.
+	isSetup = sync.Once{}
 	record = false
 	replay = true
 	replayTripper := &roundTripper{realRoundTripper: OriginalDefaultTransport}
@@ -334,6 +338,7 @@ func TestFullCycle(t *testing.T) {
 	// Now setup a recorder that will recurd all requests with one username
 	// and password.
 	fileName = T.TempFile().Name()
+	isSetup = sync.Once{}
 	record = true
 	replay = false
 	recordTripper = &roundTripper{realRoundTripper: OriginalDefaultTransport}
@@ -344,6 +349,7 @@ func TestFullCycle(t *testing.T) {
 	// still work. Note that we can not compare them to the direct results
 	// since they will contain auth headers and such. Instead we fail if a panic
 	// is raised.
+	isSetup = sync.Once{}
 	record = false
 	replay = true
 	replayTripper = &roundTripper{realRoundTripper: OriginalDefaultTransport}
