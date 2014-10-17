@@ -17,11 +17,13 @@ package dvr
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/binary"
 	"encoding/gob"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 )
 
 // If this value is anything other than nil it will be called on a copy
@@ -39,15 +41,29 @@ var Obfuscator func(*RequestResponse)
 // the output file as a zip stream so each follow up call can write an
 // individual call to the output.
 func (r *roundTripper) recordSetup() {
-	var err error
-
-	// Open the zip file for writing.
-	r.fd, err = os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+	// Open the gzip file.
+	gzipFD, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
 		os.FileMode(0755))
 	panicIfError(err)
 
+	// Write the current version to the file as a 32 bit word.
+	version := uint32(1)
+	err = binary.Write(gzipFD, binary.BigEndian, version)
+	panicIfError(err)
+
+	// Create a pipe that we can use to talk to the child process.
+	gzipReader, gzipWriter, err := os.Pipe()
+	panicIfError(err)
+
+	// Start the gzipper command.
+	writerCmd = exec.Command(os.Args[0], InterceptorToken)
+	writerCmd.Stdout = gzipFD
+	writerCmd.Stdin = gzipReader
+	panicIfError(writerCmd.Start())
+
 	// Create the new zip writer that will store our results.
-	r.writer = tar.NewWriter(r.fd)
+	fd = gzipWriter
+	writer = tar.NewWriter(gzipWriter)
 }
 
 // This function is called if the testing library is in recording mode.
@@ -55,7 +71,7 @@ func (r *roundTripper) recordSetup() {
 // requests and save them so they can be replayed later.
 func (r *roundTripper) record(req *http.Request) (*http.Response, error) {
 	// Ensure that recording is setup.
-	r.isSetup.Do(r.recordSetup)
+	isSetup.Do(r.recordSetup)
 
 	// The structure that saves all of our transmitted data.
 	q := &gobQuery{}
@@ -131,28 +147,28 @@ func (r *roundTripper) record(req *http.Request) (*http.Response, error) {
 
 	// Lock the writer output so that we don't have race conditions adding
 	// to the zip file.
-	r.writerLock.Lock()
-	defer r.writerLock.Unlock()
+	writerLock.Lock()
+	defer writerLock.Unlock()
 
 	// Add a "Header" for the nea request. Headers are functionally virtual
 	// files in the tar stream.
 	header := &tar.Header{
-		Name: fmt.Sprintf("%d", r.writerCount),
+		Name: fmt.Sprintf("%d", writerCount),
 		Size: int64(buffer.Len()),
 	}
-	r.writerCount = r.writerCount + 1
-	panicIfError(r.writer.WriteHeader(header))
+	writerCount = writerCount + 1
+	panicIfError(writer.WriteHeader(header))
 
 	// Write the buffer into the tar stream.
-	_, err := io.Copy(r.writer, buffer)
+	_, err := io.Copy(writer, buffer)
 	panicIfError(err)
 
 	// Next we need to ensure that the full object is flushed to the tar
 	// stream. We do this by flushing the writer and then syncing the
 	// underlying file descriptor.. This is necessary since we don't know
 	// when the program is going to exit.
-	panicIfError(r.writer.Flush())
-	panicIfError(r.fd.Sync())
+	panicIfError(writer.Flush())
+	//	panicIfError(fd.Sync())
 
 	// Success!
 	return resp, realErr

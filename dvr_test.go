@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 
@@ -243,6 +244,18 @@ func runTests(
 	return r
 }
 
+func resetTest(T *testlib.T) {
+	isSetup = sync.Once{}
+	if fd != nil {
+		T.ExpectSuccess(fd.Close())
+		fd = nil
+	}
+	if writerCmd != nil {
+		T.ExpectSuccess(writerCmd.Wait())
+		writerCmd = nil
+	}
+}
+
 func TestFullCycle(t *testing.T) {
 	// Reset default settings,
 	defer func() {
@@ -268,6 +281,8 @@ func TestFullCycle(t *testing.T) {
 	// Fun a bunch of queries against the server directly (no dvr at all) as
 	// we as with a pass through dvr Transport in place. Once we are done
 	// we compare all of the results of the two tests against each other.
+	fileName = T.TempFile().Name()
+	resetTest(T)
 	record = false
 	replay = false
 	directResponses := runTests(T, OriginalDefaultTransport, addr, "", "")
@@ -283,7 +298,7 @@ func TestFullCycle(t *testing.T) {
 	// Next we setup a temp file and record the same tests as above into it.
 	// We setup a recording RoundTripper and run the same tests as above into
 	// it. Once done we compare the results against the direct responses.
-	fileName = T.TempFile().Name()
+	resetTest(T)
 	record = true
 	replay = false
 	recordTripper := &roundTripper{realRoundTripper: OriginalDefaultTransport}
@@ -296,6 +311,7 @@ func TestFullCycle(t *testing.T) {
 	// Now we need to validate the file by attempting to "replay" it. To do
 	// this we create a new roundTripper with the replay option set to the file
 	// we just created and reset the flags.
+	resetTest(T)
 	record = false
 	replay = true
 	replayTripper := &roundTripper{realRoundTripper: OriginalDefaultTransport}
@@ -334,6 +350,7 @@ func TestFullCycle(t *testing.T) {
 	// Now setup a recorder that will recurd all requests with one username
 	// and password.
 	fileName = T.TempFile().Name()
+	resetTest(T)
 	record = true
 	replay = false
 	recordTripper = &roundTripper{realRoundTripper: OriginalDefaultTransport}
@@ -344,6 +361,7 @@ func TestFullCycle(t *testing.T) {
 	// still work. Note that we can not compare them to the direct results
 	// since they will contain auth headers and such. Instead we fail if a panic
 	// is raised.
+	resetTest(T)
 	record = false
 	replay = true
 	replayTripper = &roundTripper{realRoundTripper: OriginalDefaultTransport}

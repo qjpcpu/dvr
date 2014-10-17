@@ -17,6 +17,8 @@ package dvr
 import (
 	"archive/tar"
 	"bytes"
+	"compress/gzip"
+	"encoding/binary"
 	"encoding/gob"
 	"fmt"
 	"io"
@@ -103,9 +105,21 @@ func (r *roundTripper) replaySetup() {
 	fd, err := os.OpenFile(fileName, os.O_RDONLY, os.FileMode(755))
 	panicIfError(err)
 
+	// Read the file version in.
+	version := uint32(0)
+	err = binary.Read(fd, binary.BigEndian, &version)
+	panicIfError(err)
+	if version != 1 {
+		panic(fmt.Errorf("Unknown version: %d", version))
+	}
+
+	// Make a gzip reader.
+	gzipReader, err := gzip.NewReader(fd)
+	panicIfError(err)
+
 	// Create the tar reader and the list used to store the results.
-	reader := tar.NewReader(fd)
-	r.requestList = make([]*RequestResponse, 0, 100)
+	reader := tar.NewReader(gzipReader)
+	requestList = make([]*RequestResponse, 0, 100)
 
 	// While the archive has elements in it we loop through decoding them
 	// and adding them to a list.
@@ -125,7 +139,7 @@ func (r *roundTripper) replaySetup() {
 		panicIfError(gobDecoder.Decode(&gobQuery))
 
 		// Add the query to the list.
-		r.requestList = append(r.requestList, gobQuery.RequestResponse())
+		requestList = append(requestList, gobQuery.RequestResponse())
 	}
 
 	// Close the file.
@@ -135,7 +149,7 @@ func (r *roundTripper) replaySetup() {
 // This is the RoundTrip() call when we are in replay mode.
 func (r *roundTripper) replay(req *http.Request) (*http.Response, error) {
 	// Ensure that the replay system is setup.
-	r.isSetup.Do(r.replaySetup)
+	isSetup.Do(r.replaySetup)
 
 	// Read the body into a buffer.
 	buffer := &bytes.Buffer{}
@@ -145,8 +159,8 @@ func (r *roundTripper) replay(req *http.Request) (*http.Response, error) {
 	}
 
 	// Since this function deals with the requestList we need to lock.
-	r.requestLock.Lock()
-	defer r.requestLock.Unlock()
+	requestLock.Lock()
+	defer requestLock.Unlock()
 
 	// Figure out which match function to use.
 	f := Matcher
@@ -163,7 +177,7 @@ func (r *roundTripper) replay(req *http.Request) (*http.Response, error) {
 	}
 
 	var rrMatch *RequestResponse
-	for _, rr := range r.requestList {
+	for _, rr := range requestList {
 		if f(rrSource, rr) {
 			rrMatch = rr
 			break

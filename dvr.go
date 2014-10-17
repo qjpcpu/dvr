@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"sync"
 )
 
@@ -45,6 +46,26 @@ var (
 	// other flags are provided. If this is falls then the default will be
 	// to pass queries through without recording or replaying them
 	DefaultReplay bool
+
+	// On the first call to the RoundTripper we ensure that everything is
+	// setup and loaded. We only do this once, and only on the very first call.
+	isSetup sync.Once
+
+	// The file descriptor of the record file. This will exist in either
+	// record or replay mode.
+	fd *os.File
+
+	// This is the tar.Writer that is used for writing the request gob's
+	// into the file. We also keep a mutex to ensure that we only write
+	// one request at a time to the file.
+	writer      *tar.Writer
+	writerLock  sync.Mutex
+	writerCount int
+	writerCmd   *exec.Cmd
+
+	// This is the list of object read from the gob file.
+	requestList []*RequestResponse
+	requestLock sync.Mutex
 )
 
 // This is the round tripper that replaced the default round tripper in the
@@ -151,29 +172,10 @@ func panicIfError(err error) {
 // client interception routines. This is an implementation of
 // net/http.RoundTripper.
 type roundTripper struct {
-	// On the first call to the RoundTripper we ensure that everything is
-	// setup and loaded. We only do this once, and only on the very first call.
-	isSetup sync.Once
-
 	// This is the real http.RoundTripper interface that will be used
 	// when not in replay mode. All calls will be passed through to this
 	// handler.
 	realRoundTripper http.RoundTripper
-
-	// The file descriptor of the record file. This will exist in either
-	// record or replay mode.
-	fd *os.File
-
-	// This is the tar.Writer that is used for writing the request gob's
-	// into the file. We also keep a mutex to ensure that we only write
-	// one request at a time to the file.
-	writer      *tar.Writer
-	writerLock  sync.Mutex
-	writerCount int
-
-	// This is the list of object read from the gob file.
-	requestList []*RequestResponse
-	requestLock sync.Mutex
 }
 
 // This creates a new RoundTripper object with the given RoundTripper object

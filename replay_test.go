@@ -17,6 +17,7 @@ package dvr
 import (
 	"net/http"
 	"net/url"
+	"sync"
 	"testing"
 
 	"github.com/liquidgecka/testlib"
@@ -128,4 +129,36 @@ func TestMatcher(t *testing.T) {
 
 	// Test 16: Second try fails.
 	T.Equal(matcher(left, right), false)
+}
+
+func TestBadVersion(t *testing.T) {
+	T := testlib.NewT(t)
+	defer T.Finish()
+
+	fd := T.TempFile()
+	isSetup = sync.Once{}
+	record = false
+	replay = true
+	passThrough = false
+	DefaultReplay = false
+	fileName = fd.Name()
+
+	// Write all zeros to the temp file which will be version 0.
+	_, err := fd.Write([]byte{0, 0, 0, 0})
+	T.ExpectSuccess(err)
+	T.ExpectSuccess(fd.Close())
+
+	// Now check to see if the setup function fails for the right reasons.
+	defer func() {
+		err := recover()
+		if err == nil {
+			T.Fatalf("Expected panic not returned.")
+		} else if err2, ok := err.(error); !ok {
+			T.Fatalf("Unknown panic return: %#v\n", err)
+		} else {
+			T.ExpectErrorMessage(err2, "Unknown version: 0")
+		}
+	}()
+	rt := roundTripper{}
+	rt.replaySetup()
 }
