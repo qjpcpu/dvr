@@ -104,7 +104,7 @@ func TestGobError_GobEncode(t *testing.T) {
 	}
 }
 
-func TestGobError_GobDecude(t *testing.T) {
+func TestGobError_GobDecode(t *testing.T) {
 	T := testlib.NewT(t)
 	defer T.Finish()
 	// Most of the Decoding tests are in TestGobError_GobEncode other than
