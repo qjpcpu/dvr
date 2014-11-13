@@ -63,6 +63,7 @@ func init() {
 	// Other objects that we might end up seeing.
 	gob.Register(new(rsa.PublicKey))
 	gob.Register(new(rsa.PrivateKey))
+	gob.Register(new(net.TCPAddr))
 }
 
 // Adds an error interface object to the list of known types that this library
