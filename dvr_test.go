@@ -323,15 +323,32 @@ func TestFullCycle(t *testing.T) {
 	req := &http.Request{}
 	req.URL, err = url.Parse(fmt.Sprintf("http://%s/wtf", addr))
 	T.ExpectSuccess(err)
+	req.Header = map[string][]string{"TestHeader": []string{"Value1"}}
+	req.Trailer = map[string][]string{"TestTrailer": []string{"Value2"}}
+	bodyWriter := &bytesBufferCloser{}
+	_, err = bodyWriter.Write(bytes.Repeat([]byte("TEST"), 256))
+	T.ExpectSuccess(err)
+	req.Body = bodyWriter
 	client := &http.Client{}
 	client.Transport = replayTripper
 	func() {
 		defer func() {
-			err := recover()
-			if err == nil {
+			panicErr := recover()
+			if panicErr == nil {
 				T.Fatalf("An expected panic didn't happen!")
-			} else if _, ok := err.(*dvrFailure); !ok {
-				panic(err)
+			} else if err, ok := panicErr.(*dvrFailure); !ok {
+				panic(panicErr)
+			} else {
+				T.ExpectErrorMessage(err, "Matcher didn't match any execeted")
+				T.ExpectErrorMessage(err, "URL: "+req.URL.String())
+				T.ExpectErrorMessage(err, "Method", "GET")
+				T.ExpectErrorMessage(err, "Headers:")
+				T.ExpectErrorMessage(err, "TestHeader: Value1")
+				T.ExpectErrorMessage(err, "Trailers:")
+				T.ExpectErrorMessage(err, "TestTrailer: Value2")
+				T.ExpectErrorMessage(err, "Body:")
+				T.ExpectErrorMessage(err, "TESTTESTTESTTEST")
+				T.ExpectErrorMessage(err, "(content truncated by dvr)")
 			}
 		}()
 		panicOutput = ioutil.Discard
