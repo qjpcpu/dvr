@@ -163,7 +163,7 @@ func panicIfError(err error) {
 		"so the entire testing process will be terminated (sorry).\n"+
 		"Please correct the error in the message below and re-run the test.\n"+
 		"If this is an internal issue please feel free to file a bug report\n"+
-		"with the dvr developers at: FIXME\n\n"+
+		"with the dvr developers at: https://github.com/orchestrate-io/dvr\n\n"+
 		"The error encountered is:\n%s\n", err)
 	panic(&dvrFailure{Err: err})
 }
