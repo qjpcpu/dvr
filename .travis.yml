@@ -1,9 +1,5 @@
 language: go
 
-env:
-  global:
-    secure: "UPIw5pZqkg7B5OAgmTc9BPJ7h0SFG8fJSsOxt0k0UMqctw0UB77OsqlLF2Uj+PFaBJkNkRQmnYsdSQV1exgJPMiZCCkc4LcbsAKkIYl4ig5+yCKfzAz2lxFjpp8Gv4/Cs1DifQV45JeV8C3BdkAVd4MizgqVHs5acY7L/onR45s="
-
 matrix:
   allow_failures:
     - go: tip
@@ -18,6 +14,18 @@ matrix:
     - go: tip
       env: SRC="golang.org/x/tools/cmd"
 
+notifications:
+  email: false
+  hipchat:
+    rooms:
+      - c92bad93fc0d9c2d195d80c7be121a@Orchestrate
+    template:
+      - '%{repository}#%{build_number} (%{branch} - %{commit} : %{author}): %{message} %{build_url}'
+
+env:
+  global:
+    secure: "UPIw5pZqkg7B5OAgmTc9BPJ7h0SFG8fJSsOxt0k0UMqctw0UB77OsqlLF2Uj+PFaBJkNkRQmnYsdSQV1exgJPMiZCCkc4LcbsAKkIYl4ig5+yCKfzAz2lxFjpp8Gv4/Cs1DifQV45JeV8C3BdkAVd4MizgqVHs5acY7L/onR45s="
+
 before_script:
   - test -z "$SRC" || go get "$SRC/cover"
   - test -z "$SRC" || go install "$SRC/cover"
@@ -26,6 +34,7 @@ before_script:
   - test -z "$SRC" || go get github.com/mattn/goveralls
   - test -z "$SRC" || sudo -E $(which go) install -a -race std
   - go get github.com/liquidgecka/testlib
+  - go get github.com/mattn/goveralls
 
 script:
   - test -z "$(gofmt -l . | tee /dev/stderr)"
@@ -35,4 +44,4 @@ script:
   - test -z "$SRC" || go test -v -race .
 
 after_script:
- - $HOME/gopath/bin/goveralls -coverprofile=/tmp/coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+  - $HOME/gopath/bin/goveralls -coverprofile=/tmp/coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
