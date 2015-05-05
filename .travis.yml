@@ -18,11 +18,8 @@ matrix:
 
 notifications:
   email: false
-  hipchat:
-    rooms:
-      - c92bad93fc0d9c2d195d80c7be121a@Orchestrate
-    template:
-      - '%{repository}#%{build_number} (%{branch} - %{commit} : %{author}): %{message} %{build_url}'
+  slack:
+    secure: ZBt/YZS36bPXDuPgjp7N/XxmloAwOvHvG3wf+uNqn9uTyjEJTw/kjdYGn+YqNlXaoxZ2P76OgHtnORh/YDwd5VBtp4shh0S5DSH62IfRP3YfnzstQeMFGagGblBsv70syVqF+C8GkRk93/xQCMCz6J+2uicByTzIO7+YEA1C9Qc=
 
 env:
   global:
