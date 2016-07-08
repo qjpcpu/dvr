@@ -179,8 +179,11 @@ func (r *roundTripper) replay(req *http.Request) (*http.Response, error) {
 
 	var rrMatch *RequestResponse
 	for _, rr := range requestList {
-		if f(rrSource, rr) {
-			rrMatch = rr
+		// copy requestresponse obj, so it can be modified in matcher
+		copyrr := new(RequestResponse)
+		*copyrr = *rr
+		if f(rrSource, copyrr) {
+			rrMatch = copyrr
 			break
 		}
 	}
