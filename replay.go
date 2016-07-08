@@ -184,7 +184,15 @@ func (r *roundTripper) replay(req *http.Request) (*http.Response, error) {
 		*copyrr = *rr
 		copyrr.Response = new(http.Response)
 		*copyrr.Response = *rr.Response
+		// copy body
 		copyrr.RequestBody = make([]byte, len(rr.RequestBody))
+		// copy header
+		copyrr.Response.Header = http.Header{}
+		for k, vals := range rr.Response.Header {
+			for _, v := range vals {
+				copyrr.Response.Header.Add(k, v)
+			}
+		}
 		copy(copyrr.RequestBody, rr.RequestBody)
 		if f(rrSource, copyrr) {
 			rrMatch = copyrr
