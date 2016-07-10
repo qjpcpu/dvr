@@ -26,6 +26,9 @@ import (
 	"os/exec"
 )
 
+// Record certain request
+var RecordRequest func(*http.Request) bool
+
 // If this value is anything other than nil it will be called on a copy
 // of the passed in *http.Request and a copy of the returned
 // *http.Response object. Any mutations to these objects will be stored in the
@@ -91,6 +94,9 @@ func (r *roundTripper) record(req *http.Request) (*http.Response, error) {
 
 	// Use the underlying round tripper to actually complete the request.
 	resp, realErr := r.realRoundTripper.RoundTrip(req)
+	if RecordRequest == nil || !RecordRequest(req) {
+		return resp, realErr
+	}
 
 	// Save the data we were returned.
 	q.Error.Error = realErr

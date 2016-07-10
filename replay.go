@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"strings"
 )
 
 // This function is used by the replay component of this library to determine
@@ -200,41 +199,8 @@ func (r *roundTripper) replay(req *http.Request) (*http.Response, error) {
 		}
 	}
 	if rrMatch == nil {
-		messageLines := []string{
-			"Matcher didn't match any execeted queries.\n",
-			"Details of the failed request:",
-			"",
-			fmt.Sprintf("URL: %s", req.URL.String()),
-			fmt.Sprintf("Method: %s", req.Method),
-		}
-		if len(req.Header) > 0 {
-			messageLines = append(messageLines, "\nHeaders:")
-			for key, value := range req.Header {
-				messageLines = append(messageLines,
-					fmt.Sprintf("    %s: %s", key, strings.Join(value, ", ")))
-			}
-		}
-		if len(req.Trailer) > 0 {
-			messageLines = append(messageLines, "\nTrailers:")
-			for key, value := range req.Trailer {
-				messageLines = append(messageLines,
-					fmt.Sprintf("    %s: %s", key, strings.Join(value, ", ")))
-			}
-		}
-		if len(buffer.Bytes()) > 0 {
-			// This block is written a little funky in order to make testing
-			// easier since it doesn't if/else as much.
-			messageLines = append(messageLines, "Body:")
-			length := len(buffer.Bytes())
-			warning := ""
-			if length > 512 {
-				length = 512
-				warning = "... (content truncated by dvr)"
-			}
-			messageLines = append(messageLines,
-				string(buffer.Bytes()[:length])+warning)
-		}
-		panicIfError(fmt.Errorf(strings.Join(messageLines, "\n")))
+		// use default transport to execute http request
+		return OriginalDefaultTransport.RoundTrip(req)
 	}
 
 	// Check to see if the response was an error when recorded.
